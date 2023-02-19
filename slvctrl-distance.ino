@@ -4,6 +4,8 @@
 
 const char* DEVICE_TYPE = "distance";
 const int FW_VERSION = 10000; // 1.00.00
+const int PROTOCOL_VERSION = 10000; // 1.00.00
+
 Adafruit_VL6180X vl = Adafruit_VL6180X();
 
 char serial_command_buffer[32];
@@ -26,7 +28,11 @@ void setup() {
     // Add commands
     serialCommands.SetDefaultHandler(commandUnrecognized);
     serialCommands.AddCommand(new SerialCommand("introduce", commandIntroduce));
+    serialCommands.AddCommand(new SerialCommand("attributes", commandAttributes));
     serialCommands.AddCommand(new SerialCommand("status", commandStatus));
+    serialCommands.AddCommand(new SerialCommand("get-distance", commandGetDistance));
+    serialCommands.AddCommand(new SerialCommand("get-sensor", commandGetSensor));
+    serialCommands.AddCommand(new SerialCommand("get-lux", commandGetLux));
 
     serialCommands.GetSerial()->write(0x07);
 }
@@ -35,13 +41,23 @@ void loop() {
     serialCommands.ReadSerial();
 }
 
+void commandUnrecognized(SerialCommands* sender, const char* cmd)
+{
+    serial_printf(sender->GetSerial(), "Unrecognized command [%s]\n", cmd);
+}
+
 void commandIntroduce(SerialCommands* sender) {
-    serial_printf(sender->GetSerial(), "%s,%d\n", DEVICE_TYPE, FW_VERSION);
+    serial_printf(sender->GetSerial(), "introduce;%s,%d,%d\n", DEVICE_TYPE, FW_VERSION, PROTOCOL_VERSION);
+}
+
+void commandAttributes(SerialCommands* sender)
+{
+    serial_printf(sender->GetSerial(), "attributes;sensor:ro[str],distance:ro[int],lux:ro[float]\n");
 }
 
 void commandStatus(SerialCommands* sender) {
     if (!sensorFound) {
-        sender->GetSerial()->write("status,sensor:not_found\n");
+        sender->GetSerial()->write("status;lux:,distance:,sensor:\n");
     }
 
     float lux = vl.readLux(VL6180X_ALS_GAIN_5);
@@ -50,13 +66,41 @@ void commandStatus(SerialCommands* sender) {
     
     updateSensorStatus(status); 
     
-    serial_printf(sender->GetSerial(), "status,sensor:%s,distance:%d,lux:%d\n", sensorStatus, range, status);
+    serial_printf(sender->GetSerial(), "status;sensor:%s,distance:%d,lux:%d\n", sensorStatus, range, lux);
 }
 
-void commandUnrecognized(SerialCommands* sender, const char* cmd)
-{
-    serial_printf(sender->GetSerial(), "Unrecognized command [%s]\n", cmd);
+void commandGetSensor(SerialCommands* sender) {
+    if (!sensorFound) {
+        sender->GetSerial()->write("get-sensor;;status:failed,reason:sensor_not_found\n");
+    }
+
+    uint8_t status = vl.readRangeStatus();
+    
+    updateSensorStatus(status); 
+    
+    serial_printf(sender->GetSerial(), "get-sensor;%s;status:successful\n", sensorStatus);
 }
+
+void commandGetDistance(SerialCommands* sender) {
+    if (!sensorFound) {
+        sender->GetSerial()->write("get-distance;;status:failed,reason:sensor_not_found\n");
+    }
+
+    uint8_t range = vl.readRange();
+    
+    serial_printf(sender->GetSerial(), "get-distance;%d;status:successful\n", range);
+}
+
+void commandGetLux(SerialCommands* sender) {
+    if (!sensorFound) {
+        sender->GetSerial()->write("get-sensor;;status:failed,reason:sensor_not_found\n");
+    }
+
+    float lux = vl.readLux(VL6180X_ALS_GAIN_5);
+    
+    serial_printf(sender->GetSerial(), "get-sensor;%d;status:successful\n", lux);
+}
+
 
 void updateSensorStatus(uint8_t status) {
   if (status == VL6180X_ERROR_NONE) {
