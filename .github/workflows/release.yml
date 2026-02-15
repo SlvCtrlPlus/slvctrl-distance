@@ -1,0 +1,57 @@
+name: release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build-and-attach:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        env:
+          - teensy40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: ${{ runner.os }}-pio-${{ hashFiles('**/platformio.ini', '**/library.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
+      - name: Install PlatformIO
+        run: pip install -U platformio
+
+      - name: Build firmware (${{ matrix.env }})
+        run: |
+          cd nogasm_code
+          platformio run -e ${{ matrix.env }}
+
+      - name: Prepare firmware artifact
+        run: |
+          cd nogasm_code/.pio/build/${{ matrix.env }}
+          for f in firmware.*; do
+            ext="${f##*.}"
+            mv "$f" "nogasm-${{ matrix.env }}-${{ github.ref_name }}.$ext"
+          done
+
+      - name: Upload firmware
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            nogasm_code/.pio/build/${{ matrix.env }}/nogasm-${{ matrix.env }}-${{ github.ref_name }}.*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
