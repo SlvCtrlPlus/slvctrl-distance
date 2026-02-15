@@ -2,9 +2,9 @@ name: build
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
 
 jobs:
   platformio:
@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         env:
-          - teensy40
+          - adafruit_trinket_m0
 
     steps:
       - name: Checkout
@@ -39,5 +39,5 @@ jobs:
 
       - name: Build example (${{ matrix.env }})
         run: |
-          cd nogasm_code
+          cd code
           platformio run -e ${{ matrix.env }}

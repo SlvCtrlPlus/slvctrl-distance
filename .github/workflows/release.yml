@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         env:
-          - teensy40
+          - adafruit_trinket_m0
 
     steps:
       - name: Checkout
@@ -37,21 +37,21 @@ jobs:
 
       - name: Build firmware (${{ matrix.env }})
         run: |
-          cd nogasm_code
+          cd code
           platformio run -e ${{ matrix.env }}
 
       - name: Prepare firmware artifact
         run: |
-          cd nogasm_code/.pio/build/${{ matrix.env }}
+          cd code/.pio/build/${{ matrix.env }}
           for f in firmware.*; do
             ext="${f##*.}"
-            mv "$f" "nogasm-${{ matrix.env }}-${{ github.ref_name }}.$ext"
+            mv "$f" "slvctrl-distance-${{ matrix.env }}-${{ github.ref_name }}.$ext"
           done
 
       - name: Upload firmware
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            nogasm_code/.pio/build/${{ matrix.env }}/nogasm-${{ matrix.env }}-${{ github.ref_name }}.*
+            code/.pio/build/${{ matrix.env }}/slvctrl-distance-${{ matrix.env }}-${{ github.ref_name }}.*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
