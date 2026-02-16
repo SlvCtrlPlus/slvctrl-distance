@@ -40,6 +40,12 @@ jobs:
           cd code
           platformio run -e ${{ matrix.env }}
 
+      - name: "Create uf2 (${{ matrix.env }})"
+        run: |
+          cd code/.pio/build/${{ matrix.env }}
+          python3 $HOME/.platformio/packages/tool-uf2conv/uf2conv.py \
+          ./firmware.bin --base 0x2000 --output ./firmware.uf2
+
       - name: Prepare firmware artifact
         run: |
           cd code/.pio/build/${{ matrix.env }}
