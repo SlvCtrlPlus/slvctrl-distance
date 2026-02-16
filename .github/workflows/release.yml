@@ -42,9 +42,9 @@ jobs:
 
       - name: "Create uf2 (${{ matrix.env }})"
         run: |
-          pip install uf2conv
+          curl -L https://raw.githubusercontent.com/microsoft/uf2/master/utils/uf2conv.py -o ~/uf2conv.py
           cd code/.pio/build/${{ matrix.env }}
-          uf2conv ./firmware.bin --base 0x2000 --output ./firmware.uf2
+          python3 ~/uf2conv ./firmware.bin --base 0x2000 --output ./firmware.uf2
 
       - name: Prepare firmware artifact
         run: |
